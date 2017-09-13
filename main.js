@@ -1,8 +1,6 @@
 const electron = require('electron')
 // Module to control application life.
-const app = electron.app
-// Module to create native browser window.
-const BrowserWindow = electron.BrowserWindow
+const { app, Menu, BrowserWindow } = electron
 
 const path = require('path')
 const url = require('url')
@@ -13,6 +11,7 @@ let mainWindow;
 
 function createWindow () {
   // Create the browser window.
+
   const win = new BrowserWindow({width: 800, height: 600, tabbingIdentifier: 'window'})
 
   // and load the index.html of the app.
@@ -22,13 +21,23 @@ function createWindow () {
     slashes: true
   }))
 
+  createMenu()
+
+  win.on("close", function() {
+    if (win === mainWindow) {
+      mainWindow = null
+    }
+  })
+
   return win
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow)
+app.on('ready', function() {
+  mainWindow = createWindow()
+})
 
 app.on('new-window-for-tab', function () {
   createWindow()
@@ -53,3 +62,107 @@ app.on('activate', function () {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+function createMenu() {
+  const template = [
+    {
+      label: 'Edit',
+      submenu: [
+	{role: 'undo'},
+	{role: 'redo'},
+	{type: 'separator'},
+	{role: 'cut'},
+	{role: 'copy'},
+	{role: 'paste'},
+	{role: 'pasteandmatchstyle'},
+	{role: 'delete'},
+	{role: 'selectall'}
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+	{role: 'reload'},
+	{role: 'forcereload'},
+	{role: 'toggledevtools'},
+	{type: 'separator'},
+	{role: 'resetzoom'},
+	{role: 'zoomin'},
+	{role: 'zoomout'},
+	{type: 'separator'},
+	{role: 'togglefullscreen'}
+      ]
+    },
+    {
+      role: 'window',
+      submenu: [
+	{role: 'minimize'},
+	{role: 'close'}
+      ]
+    },
+    {
+      role: 'help',
+      submenu: [
+	{
+	  label: 'Learn More',
+	  click () {require('electron').shell.openExternal('https://electron.atom.io') }
+	}
+      ]
+    }
+  ]
+
+  if (process.platform === 'darwin') {
+    template.unshift({
+      label: app.getName(),
+      submenu: [
+	{role: 'about'},
+	{type: 'separator'},
+	{role: 'services', submenu: []},
+	{type: 'separator'},
+	{role: 'hide'},
+	{role: 'hideothers'},
+	{role: 'unhide'},
+	{type: 'separator'},
+	{role: 'quit'},
+	{
+	  label: "New Tab",
+	  click() {
+      const focusedWindow = BrowserWindow.getFocusedWindow()
+
+	    if (focusedWindow) {
+	      focusedWindow.addTabbedWindow(createWindow())
+	    } else {
+	      console.log("No mainWindow")
+	      mainWindow = createWindow()
+	    }
+	  },
+	  accelerator: "CommandOrControl+T",
+	}
+      ]
+    })
+
+    // Edit menu
+    template[1].submenu.push(
+      {type: 'separator'},
+      {
+	label: 'Speech',
+	submenu: [
+	  {role: 'startspeaking'},
+	  {role: 'stopspeaking'}
+	]
+      }
+    )
+
+    // Window menu
+    template[3].submenu = [
+      {role: 'close'},
+      {role: 'minimize'},
+      {role: 'zoom'},
+      {type: 'separator'},
+      {role: 'front'}
+    ]
+  }
+
+  const menu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(menu)
+}
